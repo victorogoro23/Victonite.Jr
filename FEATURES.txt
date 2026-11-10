@@ -42,10 +42,17 @@ BOT_ADMIN_ROLE
     Role name required for the secret command. Defaults to admin.
 
 WELCOME_CHANNEL_ID
-    Numeric ID of a server text channel for welcome and member-leave messages.
-    If omitted, new members are welcomed by DM and no leave message is posted.
-    The bot needs permission to view and send messages in the configured
-    channel.
+    Numeric ID of the server text channel for join welcomes and member-leave
+    notices. If omitted or unavailable, the bot tries the server's system
+    channel, then the first text channel it can access. The bot needs View
+    Channel and Send Messages permission in the selected channel.
+
+WELCOME_RULES
+    Optional server rules sent by DM to each new member. Separate rules with
+    vertical bars (|). Defaults cover respectful behavior, no NSFW content,
+    no spam or unsolicited advertising, privacy, and Discord's Terms of
+    Service. The rules must fit within Discord's 1024-character embed field
+    limit. New members must allow DMs from the bot to receive them.
 
 SUGGESTIONS_CHANNEL_ID
     Numeric ID of the channel where !suggest submissions are posted.
@@ -208,10 +215,11 @@ Commands do not respond:
     Portal. Check discord.log for connection or permission errors.
 
 Welcome messages are missing:
-    Enable Server Members Intent in the Developer Portal. For a channel
-    welcome, set WELCOME_CHANNEL_ID to the numeric channel ID and grant the bot
-    View Channel and Send Messages. Without a channel setting, members must
-    permit the bot to DM them.
+    Enable Server Members Intent in the Developer Portal. Set
+    WELCOME_CHANNEL_ID to a text channel ID or ensure the server system channel
+    allows the bot to view and send messages. The bot also tries the first
+    accessible text channel. It DMs the rules separately; members must allow
+    DMs from server members for that part to work.
 
 Moderation or role actions fail:
     Grant the bot the required permission and move its top role above the

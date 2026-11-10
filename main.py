@@ -21,6 +21,19 @@ if not TOKEN:
 PREFIX = os.getenv("BOT_PREFIX", "!")
 ADMIN_ROLE = os.getenv("BOT_ADMIN_ROLE", "admin")
 WELCOME_CHANNEL_ID = os.getenv("WELCOME_CHANNEL_ID", "").strip()
+WELCOME_RULES = tuple(
+    rule.strip()
+    for rule in os.getenv(
+        "WELCOME_RULES",
+        "Be respectful to everyone|No NSFW or otherwise inappropriate content"
+        "|No spam, raids, or unsolicited advertising|Respect people's privacy"
+        "|Follow Discord's Terms of Service and moderator instructions",
+    ).split("|")
+    if rule.strip()
+)
+WELCOME_RULES_TEXT = "\n".join(f"• {rule}" for rule in WELCOME_RULES)
+if not WELCOME_RULES or len(WELCOME_RULES_TEXT) > 1024:
+    raise SystemExit("WELCOME_RULES must contain rules totaling 1024 characters or fewer.")
 SUGGESTIONS_CHANNEL_ID = os.getenv("SUGGESTIONS_CHANNEL_ID", "").strip()
 REPORTS_CHANNEL_ID = os.getenv("REPORTS_CHANNEL_ID", "").strip()
 DATABASE_PATH = os.getenv("WARNINGS_DATABASE", "warnings.sqlite3")
@@ -211,51 +224,125 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member):
+    channel = None
     try:
         if WELCOME_CHANNEL_ID:
             channel_id = configured_channel_id(WELCOME_CHANNEL_ID, "WELCOME_CHANNEL_ID")
             channel = member.guild.get_channel(channel_id)
-            if not isinstance(channel, (discord.TextChannel, discord.Thread)):
+            if not isinstance(channel, discord.TextChannel):
                 logger.warning(
                     "Welcome channel %s is unavailable or is not a text channel in server %s",
                     channel_id,
                     member.guild.id,
                 )
-                return
-            embed = make_embed(
+    except ValueError:
+        logger.error("WELCOME_CHANNEL_ID must be a numeric Discord channel ID")
+
+    if channel is None:
+        channel = member.guild.system_channel
+    if channel is None and member.guild.me:
+        channel = next(
+            (
+                candidate
+                for candidate in member.guild.text_channels
+                if candidate.permissions_for(member.guild.me).view_channel
+                and candidate.permissions_for(member.guild.me).send_messages
+            ),
+            None,
+        )
+
+    if member.guild.me and isinstance(channel, discord.TextChannel):
+        permissions = channel.permissions_for(member.guild.me)
+        if not permissions.view_channel or not permissions.send_messages:
+            channel = next(
+                (
+                    candidate
+                    for candidate in member.guild.text_channels
+                    if candidate.id != channel.id
+                    and candidate.permissions_for(member.guild.me).view_channel
+                    and candidate.permissions_for(member.guild.me).send_messages
+                ),
+                None,
+            )
+
+    if isinstance(channel, discord.TextChannel):
+        permissions = channel.permissions_for(member.guild.me) if member.guild.me else None
+        if permissions and permissions.view_channel and permissions.send_messages:
+            welcome_embed = make_embed(
                 f"Welcome to {member.guild.name}!",
                 f"{member.mention} just joined the community.\n"
                 f"You’re member **#{member.guild.member_count or '—'}**!",
                 discord.Color.green(),
             )
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.add_field(
+            welcome_embed.set_thumbnail(url=member.display_avatar.url)
+            welcome_embed.add_field(
                 name="Getting started",
-                value="Say hello and check out the server channels.",
+                value="Check your DMs for the server rules, then say hello!",
                 inline=False,
             )
             if member.guild.icon:
-                embed.set_author(name=member.guild.name, icon_url=member.guild.icon.url)
-            await channel.send(
-                content=member.mention,
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
-            )
+                welcome_embed.set_author(
+                    name=member.guild.name,
+                    icon_url=member.guild.icon.url,
+                )
+            try:
+                await channel.send(
+                    content=member.mention,
+                    embed=welcome_embed,
+                    allowed_mentions=discord.AllowedMentions(
+                        users=[member], roles=False, everyone=False
+                    ),
+                )
+            except discord.Forbidden:
+                logger.info(
+                    "Could not post a welcome message in channel %s",
+                    channel.id,
+                )
+            except discord.HTTPException:
+                logger.exception(
+                    "Failed to post a welcome message in channel %s",
+                    channel.id,
+                )
         else:
-            embed = make_embed(
-                f"Welcome to {member.guild.name}!",
-                "We're glad you're here. Check out the server channels and say hello!",
-                discord.Color.green(),
+            logger.warning(
+                "Bot cannot view or send welcome messages in channel %s",
+                channel.id,
             )
-            if member.guild.icon:
-                embed.set_thumbnail(url=member.guild.icon.url)
-            await member.send(embed=embed)
-    except ValueError:
-        logger.error("WELCOME_CHANNEL_ID must be a numeric Discord channel ID")
+    else:
+        logger.warning(
+            "No suitable welcome text channel found in server %s",
+            member.guild.id,
+        )
+
+    rules_embed = make_embed(
+        f"Welcome to {member.guild.name}!",
+        "Before you join in, please read and follow these community rules.",
+        discord.Color.blurple(),
+    )
+    rules_embed.add_field(
+        name="📜 Server rules",
+        value=WELCOME_RULES_TEXT,
+        inline=False,
+    )
+    if member.guild.icon:
+        rules_embed.set_thumbnail(url=member.guild.icon.url)
+    rules_embed.add_field(
+        name="Need help?",
+        value="Contact a moderator if you have questions. Enjoy your stay!",
+        inline=False,
+    )
+    try:
+        await member.send(embed=rules_embed)
     except discord.Forbidden:
-        logger.info("Could not send a welcome message for member %s", member.id)
+        logger.info(
+            "Could not DM the server rules to member %s; their DMs may be closed",
+            member.id,
+        )
     except discord.HTTPException:
-        logger.exception("Failed to send a welcome message for member %s", member.id)
+        logger.exception(
+            "Failed to DM the server rules to member %s",
+            member.id,
+        )
 
 
 @bot.event

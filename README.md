@@ -1,9 +1,9 @@
 # Victonite.Jr Discord Bot
 
 A single-file Discord bot built with Python and discord.py. It includes polished
-welcome messages, configurable profanity filtering, polls and suggestions,
-reminders, server utilities, role management, channel controls, and moderation
-with persistent warning history.
+server welcome pings and private rules DMs, configurable profanity filtering,
+polls and suggestions, reminders, server utilities, role management, channel
+controls, and moderation with persistent warning history.
 
 See [FEATURES.txt](FEATURES.txt) for the complete feature, command, permission,
 configuration, and troubleshooting guide.
