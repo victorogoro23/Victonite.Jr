@@ -1,0 +1,219 @@
+VICTONITE.JR DISCORD BOT
+========================
+
+OVERVIEW
+--------
+This is a feature-rich prefix-command Discord bot. The default prefix is !.
+All Python implementation is contained in main.py. The bot uses discord.py and
+python-dotenv, and SQLite (included with Python) to store warnings.
+
+GETTING STARTED
+---------------
+1. Install the packages listed in requirements.txt in your Python environment.
+2. Create a .env file beside main.py and add:
+
+   DISCORD_TOKEN=your_bot_token
+
+3. Invite the bot with only the permissions it needs. Enable the
+   Message Content Intent and Server Members Intent in the Discord Developer
+   Portal, because the bot reads prefix commands and handles member joins.
+   The corresponding privileged intents must also be enabled in the bot code;
+   they are already enabled in main.py.
+4. Start the bot with Python 3.10 or later:
+
+   python main.py
+
+The bot writes rotating logs to discord.log. Warning records are kept in
+warnings.sqlite3 by default. Keep both files in the bot's working directory
+and back up warnings.sqlite3 if warning history must be retained.
+
+CONFIGURATION
+-------------
+All settings are optional except DISCORD_TOKEN:
+
+DISCORD_TOKEN
+    The private bot token from the Discord Developer Portal. Do not share or
+    commit this value.
+
+BOT_PREFIX
+    Command prefix. Defaults to !. Example: BOT_PREFIX=?
+
+BOT_ADMIN_ROLE
+    Role name required for the secret command. Defaults to admin.
+
+WELCOME_CHANNEL_ID
+    Numeric ID of a server text channel for welcome and member-leave messages.
+    If omitted, new members are welcomed by DM and no leave message is posted.
+    The bot needs permission to view and send messages in the configured
+    channel.
+
+SUGGESTIONS_CHANNEL_ID
+    Numeric ID of the channel where !suggest submissions are posted.
+
+REPORTS_CHANNEL_ID
+    Numeric ID of a private moderator channel where !report submissions are
+    posted. Restrict channel access to the moderation team.
+
+BLOCKED_WORDS
+    Optional comma-separated list replacing the built-in profanity list.
+    Defaults include common profanity such as ass, asshole, bastard, bitch,
+    bullshit, crap, damn, dick, fuck and its common variants, motherfucker,
+    piss, shit, slut, twat, and wanker. The filter ignores case and catches
+    whole words with up to two punctuation/space characters between letters.
+    Set BLOCKED_WORDS= to disable filtering. Avoid putting commas in phrases.
+    The bot needs Manage Messages in channels where it should remove messages.
+
+WARNINGS_DATABASE
+    SQLite database path for moderation warnings. Defaults to
+    warnings.sqlite3.
+
+Important: Keep the reports channel private and choose filter terms that fit
+your community. Word filters cannot catch every variation and can occasionally
+flag harmless text. Review moderation actions and adjust BLOCKED_WORDS as
+needed.
+
+COMMANDS
+--------
+General and information
+-----------------------
+!help [command]
+    Show the polished command guide or usage for one command.
+!hello
+    Greet the user who invoked the command.
+!ping
+    Show the bot's websocket latency.
+!botinfo
+    Show bot statistics, library version, and command prefix.
+!serverinfo
+    Show the current server's ID, member count, owner, channel and role counts,
+    and creation date.
+!userinfo [member]
+    Show a member's ID, account age, server join date, and up to ten roles.
+!avatar [user]
+    Display a user's current avatar.
+!roleinfo <role>
+    Show role membership count, position, and role settings.
+!dm <message>
+    Send the invoking user a private message from the bot. The user must allow
+    DMs from the bot.
+!reply <message>
+!say <message>
+    Repeat a message with the sender's display name. User and role mentions in
+    the repeated message are disabled to prevent accidental pings.
+
+Fun and community
+-----------------
+!poll <question> [| <choice 1> | <choice 2> ...]
+!echo <question>
+    Post a polished yes/no poll with 👍 and 👎, or add 2–10 choices after |
+    separators to create a numbered reaction poll. echo is an alias for poll.
+!choose <option 1>, <option 2>[, ...]
+    Randomly select from two to twenty comma-separated choices.
+!coinflip
+    Randomly return heads or tails.
+!8ball <question>
+    Return a random magic 8-ball response.
+!reply <message>
+!say <message>
+    Repeat a message without allowing user or role mentions.
+!suggest <suggestion>
+    Send a suggestion to SUGGESTIONS_CHANNEL_ID for community feedback.
+    Suggestions are rate-limited per user and receive 👍/👎 reactions.
+!report <member> <details>
+    Send a private member report to REPORTS_CHANNEL_ID. Reports are
+    rate-limited per user. Set the destination to a private moderator channel.
+!remind <minutes> <reminder>
+    Post a reminder in the current channel after 1–10080 minutes (up to seven
+    days). Reminders are kept in memory and are lost if the bot restarts.
+
+Roles
+-----
+!assign <member> <role>
+!roleadd <member> <role>
+    Give a role to a member. Requires Manage Roles. Discord role hierarchy
+    still applies: the bot's highest role must be above the role being given.
+!remove <member> <role>
+!roleremove <member> <role>
+    Remove a role from a member. Requires Manage Roles and the same role
+    hierarchy requirement.
+!secret
+    Display the restricted command response. Requires the role configured by
+    BOT_ADMIN_ROLE (admin by default).
+!nickname <member> [new nickname]
+    Set or reset a member's nickname. Requires Manage Nicknames.
+
+Moderation
+----------
+!clear <amount>
+    Delete up to 1 to 100 recent messages, plus the command message. The
+    confirmation count excludes the command itself. Requires Manage Messages.
+    Discord does not allow bulk deletion of messages older than fourteen days.
+!purgeuser <member> [amount]
+    Delete up to 100 recent messages from that member in the current channel.
+    Requires Manage Messages.
+!kick <member> [reason]
+    Kick a member. Requires Kick Members.
+!ban <member> [reason]
+    Ban a member. Requires Ban Members.
+!unban <user ID> [reason]
+    Unban a user by numeric Discord user ID. Requires Ban Members.
+!timeout <member> <minutes> [reason]
+    Timeout a member for 1 to 40320 minutes (up to 28 days). Requires
+    Moderate Members.
+!untimeout <member> [reason]
+    Remove a member's timeout. Requires Moderate Members.
+!warn <member> <reason>
+    Record a warning in the local SQLite database and attempt to DM the
+    member. Requires Manage Messages.
+!warnings <member>
+    Show up to the ten most recent warnings for that member in this server.
+    Requires Manage Messages.
+!clearwarnings <member>
+    Permanently delete all recorded warnings for that member in this server.
+    Requires Manage Messages.
+!slowmode <seconds>
+    Set the current channel's slowmode to 0–21600 seconds. Requires Manage
+    Channels.
+!lock / !unlock
+    Deny or restore @everyone's send-messages permission in the current
+    channel. Requires Manage Channels.
+!announce <message>
+    Post a formatted announcement in the current channel. Requires Manage
+    Server.
+
+PERMISSIONS AND SAFETY
+----------------------
+Moderation and role commands check the invoking member's Discord permissions.
+Discord also enforces bot permissions and role hierarchy when actions occur.
+Grant the bot only the permissions required for the commands you intend to use.
+For example, role management needs Manage Roles, moderation actions need their
+matching permissions, and the message filter needs Manage Messages.
+
+The warning database is local to the bot process's host; it is not synchronized
+between multiple bot instances. Configure WARNINGS_DATABASE to choose another
+local path. The message filter only runs in servers, removes matching messages,
+and posts a short styled notice. Welcome and leave messages use embeds in the
+configured welcome channel; polls, suggestions, reports, moderation notices,
+and info commands also use formatted embeds.
+
+TROUBLESHOOTING
+---------------
+Missing token:
+    Add DISCORD_TOKEN to .env. The bot exits with a clear message if it is
+    absent.
+
+Commands do not respond:
+    Check that the bot is online, that the configured prefix is correct, and
+    that Message Content Intent is enabled both in main.py and in the Developer
+    Portal. Check discord.log for connection or permission errors.
+
+Welcome messages are missing:
+    Enable Server Members Intent in the Developer Portal. For a channel
+    welcome, set WELCOME_CHANNEL_ID to the numeric channel ID and grant the bot
+    View Channel and Send Messages. Without a channel setting, members must
+    permit the bot to DM them.
+
+Moderation or role actions fail:
+    Grant the bot the required permission and move its top role above the
+    target member or role. The invoking moderator must also have the permission
+    listed for the command.
